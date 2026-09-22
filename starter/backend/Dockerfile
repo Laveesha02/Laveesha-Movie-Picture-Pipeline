@@ -1,14 +1,15 @@
-FROM python:3.10-slim
+FROM public.ecr.aws/docker/library/python:3.10
+ENV FLASK_RUN_HOST=0.0.0.0
 
-WORKDIR /app
+WORKDIR /
+RUN adduser --uid 1000 --disabled-password app
+RUN pip install pipenv
 
-COPY Pipfile .
+RUN mkdir -p /var/www/app && mkdir /app
 
-RUN pip install pipenv && \
-    pipenv install --system --deploy
+COPY Pipfile* /app
+RUN cd /app && pipenv install --system --deploy
 
-COPY . .
+COPY . /app
 
-EXPOSE 5000
-
-CMD ["python", "app.py"]
+CMD ["uwsgi", "--http", ":5000", "--master", "--enable-threads", "-s", "/var/www/app/app.sock", "--manage-script-name", "--mount", "/=app:app"]
